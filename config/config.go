@@ -28,4 +28,5 @@ type Config_t struct {
 	NodeList []string `json:"NodeList"` 
 	Tps  uint32 `json:"Tps"`
 	Routine uint32 `json:"Routine"`
+	OutputTxid bool `json:"output_txid"`
 }

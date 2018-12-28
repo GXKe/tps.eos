@@ -5,5 +5,6 @@
   "AccountName": "",
   "PrivKey":"",
   "Tps": 500,
-  "Routine": 500
+  "Routine": 500,
+  "output_txid":false
 }

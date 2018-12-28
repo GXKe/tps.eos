@@ -3,9 +3,10 @@ package send
 import (
 	"fmt"
 	"github.com/GXK666/tps.eos/config"
+	"github.com/GXK666/tps.eos/loger"
 	"github.com/eoscanada/eos-go"
 	"github.com/eoscanada/eos-go/ecc"
-	system "github.com/eoscanada/eos-go/system"
+	"github.com/eoscanada/eos-go/system"
 	"github.com/satori/go.uuid"
 	"math/rand"
 )
@@ -92,6 +93,9 @@ func SendHello() error {
 	}
 
 	fmt.Println("\t success , send trx id: ", rsp.TransactionID)
+
+	loger.LogTxid(rsp.TransactionID)
+
 	return nil
 }
 
