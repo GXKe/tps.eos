@@ -15,6 +15,7 @@ import (
 
 var (
 	nodeApiList []*eos.API
+	historyNodeApiList []*eos.API
 )
 var (
 	ctxKeyWorkID = 0
@@ -52,6 +53,21 @@ func init(){
 				return []ecc.PublicKey{pubKey}, nil
 			})
 			nodeApiList = append(nodeApiList, api)
+		}
+	}
+
+	for _, n := range config.Config.HistoryNodeList{
+		fmt.Println("start link node api: ", n)
+		api := eos.New(n)
+		if _, err := api.GetInfo() ; err != nil {
+			fmt.Println("init node api error : ", n, " ", err)
+		} else {
+			api.Signer = keyBag
+			api.SetCustomGetRequiredKeys(func(tx *eos.Transaction) (keys []ecc.PublicKey, e error) {
+				return []ecc.PublicKey{pubKey}, nil
+			})
+			nodeApiList = append(nodeApiList, api)
+			historyNodeApiList = append(historyNodeApiList, api)
 		}
 	}
 
@@ -108,6 +124,17 @@ func GetRandomApi() (*eos.API) {
 		nodeIdx = rand.Uint32() % uint32(len(nodeApiList))
 	}
 	return nodeApiList[nodeIdx]
+}
+
+func GetRandomHistoryApi() (*eos.API) {
+	if len(historyNodeApiList) == 0 {
+		panic("history node Api list is nil ")
+	}
+	nodeIdx := uint32(0)
+	if len(historyNodeApiList) > 1 {
+		nodeIdx = rand.Uint32() % uint32(len(historyNodeApiList ))
+	}
+	return historyNodeApiList[nodeIdx]
 }
 
 func sendHello() error {

@@ -2,6 +2,7 @@
   "NodeList": [
    "http://127.0.0.1:8888"
   ],
+  "HistoryNodeList":[],
   "AccountName": "",
   "PrivKey":"",
   "Tps": 500,

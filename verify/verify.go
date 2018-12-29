@@ -142,7 +142,7 @@ func sendVerify(ctx context.Context, j job) error {
 	if !ok {
 		return fmt.Errorf("ctx.Value(ctxKeyResult) error ")
 	}
-	_, err := send.GetRandomApi().GetTransaction(j.txid)
+	_, err := send.GetRandomHistoryApi().GetTransaction(j.txid)
 	if err != nil {
 		fmt.Println("sendVerify txid: ", j.txid, " error: ", err)
 		r.addFail()

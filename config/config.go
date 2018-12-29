@@ -25,7 +25,8 @@ func init()  {
 type Config_t struct {
 	PrivKey string `json:"PrivKey"`
 	AccountName string `json:"AccountName"`
-	NodeList []string `json:"NodeList"` 
+	NodeList []string `json:"NodeList"`
+	HistoryNodeList []string `json:"HistoryNodeList"`
 	Tps  uint32 `json:"Tps"`
 	Routine uint32 `json:"Routine"`
 	OutputTxid bool `json:"output_txid"`
