@@ -9,11 +9,23 @@ import (
 	"github.com/eoscanada/eos-go/system"
 	"github.com/satori/go.uuid"
 	"math/rand"
+	"time"
+	"context"
 )
 
 var (
-	nodeApi []*eos.API
+	nodeApiList []*eos.API
 )
+var (
+	ctxKeyWorkID = 0
+)
+
+type job struct {
+
+}
+type Hello struct {
+	User eos.AccountName `json "user"`
+}
 
 func init(){
 
@@ -39,11 +51,11 @@ func init(){
 			api.SetCustomGetRequiredKeys(func(tx *eos.Transaction) (keys []ecc.PublicKey, e error) {
 				return []ecc.PublicKey{pubKey}, nil
 			})
-			nodeApi = append(nodeApi, api)
+			nodeApiList = append(nodeApiList, api)
 		}
 	}
 
-	if len(nodeApi) ==0 {
+	if len(nodeApiList) ==0 {
 		panic("node Api[] is null")
 	}
 	fmt.Println("init node api success")
@@ -51,13 +63,30 @@ func init(){
 
 
 
-type Hello struct {
-	User eos.AccountName `json "user"`
+func Run(ctx context.Context)  {
+	jobList := make(chan job, 1000)
+	for i := uint32(0); i < config.Config.Routine; i++ {
+		ctx := context.WithValue(ctx, ctxKeyWorkID, i)
+		go work(ctx, jobList)
+	}
+
+	go func() {
+		ticker := time.NewTicker(time.Second / 2)
+
+		for {
+			time := <-ticker.C
+			fmt.Println(time.String())
+
+			for i := uint32(0); i < config.Config.Tps/2; i++ {
+				jobList <- job{}
+			}
+		}
+	}()
+
 }
 
-var api = eos.New(config.Config.NodeList[0])
 
-func NewHelloAction() *eos.Action {
+func newHelloAction() *eos.Action {
 	return &eos.Action{
 		Account: eos.AN(config.Config.AccountName),
 		Name:    eos.ActN("hi"),
@@ -70,21 +99,21 @@ func NewHelloAction() *eos.Action {
 	}
 }
 
-func SendHello() error {
-
-	hi := NewHelloAction()
-
-	if len(nodeApi) == 0 {
-		fmt.Print("node Api list is nil")
-		return fmt.Errorf("node Api list is nil ")
+func GetRandomApi() (*eos.API) {
+	if len(nodeApiList) == 0 {
+		panic("node Api list is nil ")
 	}
 	nodeIdx := uint32(0)
-	if len(nodeApi) > 1 {
-		nodeIdx = rand.Uint32() % uint32(len(nodeApi))
+	if len(nodeApiList) > 1 {
+		nodeIdx = rand.Uint32() % uint32(len(nodeApiList))
 	}
+	return nodeApiList[nodeIdx]
+}
+
+func sendHello() error {
 
 	nonce, _:=	uuid.NewV4()
-	rsp, err := nodeApi[nodeIdx].SignPushActions(hi, system.NewNonce(nonce.String()))
+	rsp, err := GetRandomApi().SignPushActions(newHelloAction(), system.NewNonce(nonce.String()))
 	if nil != err {
 		return fmt.Errorf("rsp error :%v", err)
 	}
@@ -99,3 +128,19 @@ func SendHello() error {
 	return nil
 }
 
+
+func work(ctx context.Context, list chan job)  {
+	fmt.Printf("%d \twork run.\n", ctx.Value(ctxKeyWorkID))
+	for {
+		select {
+		case <-ctx.Done():
+			fmt.Printf("%d \twork exit\n", ctx.Value(ctxKeyWorkID))
+			return
+		case <-list:
+			err := sendHello()
+			if nil != err {
+				fmt.Printf("%d \twork, send err : %v\n", ctx.Value(ctxKeyWorkID), err)
+			}
+		}
+	}
+}

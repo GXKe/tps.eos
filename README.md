@@ -2,4 +2,4 @@
 tps test for eos
 
 
-Need to deploy hello contract, there are enough cpu, net resources
+Need to deploy hello contract, and have enough cpu, net resources
