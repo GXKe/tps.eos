@@ -29,5 +29,5 @@ func main()  {
 	signal.Notify(signalChan, syscall.SIGINT, syscall.SIGTERM)
 	<-signalChan
 	cancel()
-	time.Sleep(10 * time.Second)
+	time.Sleep(3 * time.Second)
 }
