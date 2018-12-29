@@ -2,14 +2,13 @@ package verify
 
 import (
 	"bufio"
+	"context"
 	"fmt"
+	"github.com/GXK666/tps.eos/config"
+	"github.com/GXK666/tps.eos/send"
 	"io"
 	"os"
 	"sync"
-	"time"
-	"context"
-	"github.com/GXK666/tps.eos/config"
-	"github.com/GXK666/tps.eos/send"
 )
 
 var (
@@ -27,10 +26,11 @@ type result struct {
 	Success uint64
 
 	m		*sync.Mutex
+	wg 		*sync.WaitGroup
 }
 
 func newResult() *result {
-	return &result{m:new(sync.Mutex)}
+	return &result{m:new(sync.Mutex), wg:new(sync.WaitGroup)}
 }
 
 func (r *result)addTotal()  {
@@ -62,10 +62,14 @@ func check(e error) {
 	}
 }
 
+
+
 func VerifyTxid(ctx context.Context, file string) error{
 	r := newResult()
 	ctxR := context.WithValue(ctx, ctxKeyResult, r)
-	jobList := make(chan job, 1000)
+	r.wg.Add(int(config.Config.Routine))
+
+	jobList := make(chan job, config.Config.Routine)
 	for i := uint32(0); i < config.Config.Routine; i++ {
 		ctx := context.WithValue(ctxR, ctxKeyWorkID, i)
 		go work(ctx, jobList, sendVerify)
@@ -83,9 +87,13 @@ func VerifyTxid(ctx context.Context, file string) error{
 		return err
 	}
 
+	for i := uint32(0); i < config.Config.Routine; i++ {
+		jobList<-job{txid: "exit"}
+	}
+
 	r.Print()
-	fmt.Println("sleep 10s \n")
-	time.Sleep(3*time.Second)
+	fmt.Println("wait work over \n")
+	r.wg.Wait()
 
 	fmt.Println("####################VerifyTxid Result #################")
 	r.Print()
@@ -120,6 +128,12 @@ func readLine(ctx context.Context, filePth string, hookfn func([]byte)) error {
 
 func work(ctx context.Context, list chan job, hook func(context.Context, job)(error)) {
 	fmt.Printf("%d \twork run.\n", ctx.Value(ctxKeyWorkID))
+	r, ok := ctx.Value(ctxKeyResult).(*result)
+	if !ok {
+		panic("ctx.Value(ctxKeyResult) error ")
+	}
+	defer r.wg.Done()
+
 	for {
 		select {
 		case <-ctx.Done():
@@ -128,6 +142,10 @@ func work(ctx context.Context, list chan job, hook func(context.Context, job)(er
 		case e, ok:= <-list:
 			if !ok {
 				fmt.Println(ctx.Value(ctxKeyWorkID), "<-job chan  fail")
+			}
+			if len(e.txid) != 64 {
+				fmt.Printf("%d \twork exit\n", ctx.Value(ctxKeyWorkID))
+				return // work exit
 			}
 			err := hook(ctx, e)
 			if nil != err {
