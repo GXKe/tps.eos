@@ -14,7 +14,9 @@ import (
 
 func main()  {
 	file := ""
+	sendType := ""
 	flag.StringVar(&file, "f", "", "txid file name")
+	flag.StringVar(&sendType, "s", "hi", "send transfer type: hi,transfer")
 	flag.Parse()
 
 	ctx, cancel := context.WithCancel(context.Background())
@@ -22,7 +24,14 @@ func main()  {
 		verify.VerifyTxid(ctx,file)
 		return
 	} else {
-		send.Run(ctx)
+		switch sendType {
+		case "hi":
+			send.Run(ctx, send.SEND_HI)
+		case "transfer":
+			send.Run(ctx, send.SEND_TRANSFER)
+		default:
+			panic("send Type error!")
+		}
 	}
 
 	signalChan := make(chan os.Signal, 1)

@@ -7,6 +7,7 @@ import (
 	"github.com/eoscanada/eos-go"
 	"github.com/eoscanada/eos-go/ecc"
 	"github.com/eoscanada/eos-go/system"
+	"github.com/eoscanada/eos-go/token"
 	"github.com/satori/go.uuid"
 	"math/rand"
 	"time"
@@ -21,8 +22,15 @@ var (
 	ctxKeyWorkID = 0
 )
 
-type job struct {
+type SendType int
+const (
+	SEND_HI SendType = iota
+	SEND_TRANSFER
+)
 
+type job struct {
+	send SendType
+	num  uint32
 }
 type Hello struct {
 	User eos.AccountName `json "user"`
@@ -79,11 +87,11 @@ func init(){
 
 
 
-func Run(ctx context.Context)  {
+func Run(ctx context.Context, send SendType)  {
 	jobList := make(chan job, 1000)
 	for i := uint32(0); i < config.Config.Routine; i++ {
 		ctx := context.WithValue(ctx, ctxKeyWorkID, i)
-		go work(ctx, jobList)
+		go work(ctx, jobList, sendTx)
 	}
 
 	go func() {
@@ -94,7 +102,7 @@ func Run(ctx context.Context)  {
 			fmt.Println(time.String())
 
 			for i := uint32(0); i < config.Config.Tps/2; i++ {
-				jobList <- job{}
+				jobList <- job{num:i, send:send}
 			}
 		}
 	}()
@@ -104,13 +112,39 @@ func Run(ctx context.Context)  {
 
 func newHelloAction() *eos.Action {
 	return &eos.Action{
-		Account: eos.AN(config.Config.AccountName),
+		Account: eos.AN(config.Config.HiContractAccountName),
 		Name:    eos.ActN("hi"),
 		Authorization: []eos.PermissionLevel{
-			{Actor: eos.AN(config.Config.AccountName), Permission: eos.PN("active")},
+			{Actor: eos.AN(config.Config.HiContractAccountName), Permission: eos.PN("active")},
 		},
 		ActionData: eos.NewActionData(Hello{
-			User:eos.AN(config.Config.AccountName),
+			User:eos.AN(config.Config.HiContractAccountName),
+		}),
+	}
+}
+
+func newTransferAction(num uint32) *eos.Action {
+	from,to := eos.AN(config.Config.TransferUser1), eos.AN(config.Config.TransferUser2)
+	if num % uint32(2) > 0 {
+		to, from = from, to
+	}
+
+	asset, err:= eos.NewAsset(config.Config.TransferCoin)
+	if nil != err {
+		panic("config.Config.TransferCoin err")
+	}
+
+	return &eos.Action{
+		Account:eos.AN(config.Config.TransferContractAccount),
+		Name:eos.ActN("transfer"),
+		Authorization:[]eos.PermissionLevel{
+			{Actor:from, Permission:eos.PN("active")},
+		},
+		ActionData:eos.NewActionData(token.Transfer{
+			From:from,
+			To:to,
+			Quantity: asset,
+			Memo:"",
 		}),
 	}
 }
@@ -137,10 +171,19 @@ func GetRandomHistoryApi() (*eos.API) {
 	return historyNodeApiList[nodeIdx]
 }
 
-func sendHello() error {
+func newSendAction(job2 job) *eos.Action {
+	switch job2.send {
+	case SEND_HI:
+		return newHelloAction()
+	case SEND_TRANSFER:
+		return newTransferAction(job2.num)
+	}
+	return nil
+}
 
+func sendTx(ctx context.Context, job2 job) error {
 	nonce, _:=	uuid.NewV4()
-	rsp, err := GetRandomApi().SignPushActions(newHelloAction(), system.NewNonce(nonce.String()))
+	rsp, err := GetRandomApi().SignPushActions(newSendAction(job2), system.NewNonce(nonce.String()))
 	if nil != err {
 		return fmt.Errorf("rsp error :%v", err)
 	}
@@ -156,17 +199,20 @@ func sendHello() error {
 }
 
 
-func work(ctx context.Context, list chan job)  {
+func work(ctx context.Context, list chan job, hook func(context.Context, job)(error))  {
 	fmt.Printf("%d \twork run.\n", ctx.Value(ctxKeyWorkID))
 	for {
 		select {
 		case <-ctx.Done():
 			fmt.Printf("%d \twork exit\n", ctx.Value(ctxKeyWorkID))
 			return
-		case <-list:
-			err := sendHello()
+		case e, ok:= <-list:
+			if !ok {
+				fmt.Println(ctx.Value(ctxKeyWorkID), "<-job chan  fail")
+			}
+			err := hook(ctx, e)
 			if nil != err {
-				fmt.Printf("%d \twork, send err : %v\n", ctx.Value(ctxKeyWorkID), err)
+				fmt.Printf("%d \twork error: %v\n", ctx.Value(ctxKeyWorkID), err)
 			}
 		}
 	}

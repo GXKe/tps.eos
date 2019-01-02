@@ -3,9 +3,12 @@
    "http://127.0.0.1:8888"
   ],
   "HistoryNodeList":[],
-  "AccountName": "",
+  "HelloContractAccount": "",
+  "TransferContractAccount":"eosio.token",
+  "TransferUser1":"",
+  "TransferUser2":"",
+  "TransferCoin":"0.0001 EOS",
   "PrivKey":"",
-  "Tps": 500,
-  "Routine": 500,
+  "Tps": 100,
   "output_txid":false
 }
