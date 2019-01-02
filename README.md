@@ -4,7 +4,7 @@ tps test for eos
 
 Need to deploy hello contract, and have enough cpu, net resources
 
-固定读取同级目录下config.json配置
+固定读取同级目录下config.json配置，配置中所用到的账号请设置为同一私钥。
 
 ./tps.eos 启动TPS输出，默认输出hi交易
 
