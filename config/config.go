@@ -34,5 +34,6 @@ type Config_t struct {
 	Tps                     uint32   `json:"Tps"`
 	Routine                 uint32   `json:"-"`
 	Timeout                 int64    `json:"Timeout"`
+	TxExpiration            int64    `json:"TxExpiration"`
 	OutputTxid              bool     `json:"output_txid"`
 }

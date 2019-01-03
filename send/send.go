@@ -126,6 +126,7 @@ func Run(ctx context.Context, s string) error {
 		}
 	}()
 
+	return nil
 }
 
 func newHelloAction() *eos.Action {
@@ -199,9 +200,22 @@ func newSendAction(job2 job) *eos.Action {
 	return nil
 }
 
+func signPushActions(actions []*eos.Action) (out *eos.PushTransactionFullResp, err error) {
+
+	api := GetRandomApi()
+	opts := &eos.TxOptions{}
+	opts.FillFromChain(api)
+
+	tx := eos.NewTransaction(actions, opts)
+	tx.SetExpiration(time.Duration(config.Config.TxExpiration) * time.Second)
+
+	return api.SignPushTransaction(tx, opts.ChainID, opts.Compress)
+}
+
 func sendTx(ctx context.Context, job2 job) error {
 	nonce, _ := uuid.NewV4()
-	rsp, err := GetRandomApi().SignPushActions(newSendAction(job2), system.NewNonce(nonce.String()))
+	actions := []*eos.Action{newSendAction(job2), system.NewNonce(nonce.String())}
+	rsp, err := signPushActions(actions)
 	if nil != err {
 		return fmt.Errorf("rsp error :%v", err)
 	}
