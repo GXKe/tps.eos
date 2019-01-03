@@ -24,7 +24,8 @@ var (
 
 type SendType int
 const (
-	SEND_HI SendType = iota
+	SEND_ERR SendType = iota
+	SEND_HI
 	SEND_TRANSFER
 )
 
@@ -60,6 +61,7 @@ func init(){
 			api.SetCustomGetRequiredKeys(func(tx *eos.Transaction) (keys []ecc.PublicKey, e error) {
 				return []ecc.PublicKey{pubKey}, nil
 			})
+			api.HttpClient.Timeout = time.Duration(config.Config.Timeout) * time.Second
 			nodeApiList = append(nodeApiList, api)
 		}
 	}
@@ -74,6 +76,7 @@ func init(){
 			api.SetCustomGetRequiredKeys(func(tx *eos.Transaction) (keys []ecc.PublicKey, e error) {
 				return []ecc.PublicKey{pubKey}, nil
 			})
+			api.HttpClient.Timeout = time.Duration(config.Config.Timeout) * time.Second
 			nodeApiList = append(nodeApiList, api)
 			historyNodeApiList = append(historyNodeApiList, api)
 		}
@@ -85,9 +88,24 @@ func init(){
 	fmt.Println("init node api success")
 }
 
+func getSendType(s string) (SendType, error) {
+	switch s {
+	case "hi":
+		return SEND_HI,nil
+	case "transfer":
+		return SEND_TRANSFER, nil
+	default:
+		return SEND_ERR, fmt.Errorf("no support send msg type")
+	}
+}
 
+func Run(ctx context.Context, s string) error {
+	send, err := getSendType(s)
+	if nil != err {
+		return err
+	}
+	fmt.Printf("%#v", send)
 
-func Run(ctx context.Context, send SendType)  {
 	jobList := make(chan job, 1000)
 	for i := uint32(0); i < config.Config.Routine; i++ {
 		ctx := context.WithValue(ctx, ctxKeyWorkID, i)

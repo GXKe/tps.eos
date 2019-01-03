@@ -24,14 +24,10 @@ func main()  {
 		verify.VerifyTxid(ctx,file)
 		return
 	} else {
-		switch sendType {
-		case "hi":
-			send.Run(ctx, send.SEND_HI)
-		case "transfer":
-			send.Run(ctx, send.SEND_TRANSFER)
-		default:
-			panic("send Type error!")
+		if err := send.Run(ctx, sendType); nil != err {
+			panic(err)
 		}
+
 	}
 
 	signalChan := make(chan os.Signal, 1)

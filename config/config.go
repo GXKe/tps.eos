@@ -34,5 +34,6 @@ type Config_t struct {
 	HistoryNodeList []string `json:"HistoryNodeList"`
 	Tps  uint32 `json:"Tps"`
 	Routine uint32 `json:"-"`
+	Timeout int64 `json:"Timeout"`
 	OutputTxid bool `json:"output_txid"`
 }

@@ -10,5 +10,6 @@
   "TransferCoin":"0.0001 EOS",
   "PrivKey":"",
   "Tps": 100,
+  "Timeout": 2,
   "output_txid":false
 }
