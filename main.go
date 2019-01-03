@@ -2,17 +2,17 @@ package main
 
 import (
 	"flag"
-	"github.com/GXK666/tps.eos/send"
-	"github.com/GXK666/tps.eos/verify"
-	"golang.org/x/net/context"
 	"os"
 	"os/signal"
 	"syscall"
 	"time"
+
+	"github.com/GXK666/tps.eos/send"
+	"github.com/GXK666/tps.eos/verify"
+	"golang.org/x/net/context"
 )
 
-
-func main()  {
+func main() {
 	file := ""
 	sendType := ""
 	flag.StringVar(&file, "f", "", "txid file name")
@@ -20,8 +20,8 @@ func main()  {
 	flag.Parse()
 
 	ctx, cancel := context.WithCancel(context.Background())
-	if len(file) > 0  {
-		verify.VerifyTxid(ctx,file)
+	if len(file) > 0 {
+		verify.VerifyTxid(ctx, file)
 		return
 	} else {
 		if err := send.Run(ctx, sendType); nil != err {

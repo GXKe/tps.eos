@@ -1,15 +1,16 @@
 package loger
 
 import (
-	"github.com/GXK666/tps.eos/config"
+	"log"
 	"os"
 	"time"
-	"log"
+
+	"github.com/GXK666/tps.eos/config"
 )
 
 var txidLoger *log.Logger
 
-func init()  {
+func init() {
 	if !config.Config.OutputTxid {
 		return
 	}
@@ -19,7 +20,7 @@ func init()  {
 		panic(err)
 	}
 
-	txidLoger = log.New(logFile, "",0)
+	txidLoger = log.New(logFile, "", 0)
 	if nil == txidLoger {
 		panic("TxidLoger init fail")
 	}
@@ -30,7 +31,3 @@ func LogTxid(txid string) {
 		txidLoger.Println(txid)
 	}
 }
-
-
-
-

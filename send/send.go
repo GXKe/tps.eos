@@ -1,7 +1,11 @@
 package send
 
 import (
+	"context"
 	"fmt"
+	"math/rand"
+	"time"
+
 	"github.com/GXK666/tps.eos/config"
 	"github.com/GXK666/tps.eos/loger"
 	"github.com/eoscanada/eos-go"
@@ -9,13 +13,10 @@ import (
 	"github.com/eoscanada/eos-go/system"
 	"github.com/eoscanada/eos-go/token"
 	"github.com/satori/go.uuid"
-	"math/rand"
-	"time"
-	"context"
 )
 
 var (
-	nodeApiList []*eos.API
+	nodeApiList        []*eos.API
 	historyNodeApiList []*eos.API
 )
 var (
@@ -23,6 +24,7 @@ var (
 )
 
 type SendType int
+
 const (
 	SEND_ERR SendType = iota
 	SEND_HI
@@ -37,7 +39,7 @@ type Hello struct {
 	User eos.AccountName `json "user"`
 }
 
-func init(){
+func init() {
 
 	privKey, err := ecc.NewPrivateKey(config.Config.PrivKey)
 	if nil != err {
@@ -50,11 +52,10 @@ func init(){
 		fmt.Print("Couldn't load private key:", err)
 	}
 
-
-	for _, n := range config.Config.NodeList{
+	for _, n := range config.Config.NodeList {
 		fmt.Println("start link node api: ", n)
 		api := eos.New(n)
-		if _, err := api.GetInfo() ; err != nil {
+		if _, err := api.GetInfo(); err != nil {
 			fmt.Println("init node api error : ", n, " ", err)
 		} else {
 			api.Signer = keyBag
@@ -66,10 +67,10 @@ func init(){
 		}
 	}
 
-	for _, n := range config.Config.HistoryNodeList{
+	for _, n := range config.Config.HistoryNodeList {
 		fmt.Println("start link node api: ", n)
 		api := eos.New(n)
-		if _, err := api.GetInfo() ; err != nil {
+		if _, err := api.GetInfo(); err != nil {
 			fmt.Println("init node api error : ", n, " ", err)
 		} else {
 			api.Signer = keyBag
@@ -82,7 +83,7 @@ func init(){
 		}
 	}
 
-	if len(nodeApiList) ==0 {
+	if len(nodeApiList) == 0 {
 		panic("node Api[] is null")
 	}
 	fmt.Println("init node api success")
@@ -91,7 +92,7 @@ func init(){
 func getSendType(s string) (SendType, error) {
 	switch s {
 	case "hi":
-		return SEND_HI,nil
+		return SEND_HI, nil
 	case "transfer":
 		return SEND_TRANSFER, nil
 	default:
@@ -120,13 +121,12 @@ func Run(ctx context.Context, s string) error {
 			fmt.Println(time.String())
 
 			for i := uint32(0); i < config.Config.Tps/2; i++ {
-				jobList <- job{num:i, send:send}
+				jobList <- job{num: i, send: send}
 			}
 		}
 	}()
 
 }
-
 
 func newHelloAction() *eos.Action {
 	return &eos.Action{
@@ -136,38 +136,38 @@ func newHelloAction() *eos.Action {
 			{Actor: eos.AN(config.Config.HiContractAccountName), Permission: eos.PN("active")},
 		},
 		ActionData: eos.NewActionData(Hello{
-			User:eos.AN(config.Config.HiContractAccountName),
+			User: eos.AN(config.Config.HiContractAccountName),
 		}),
 	}
 }
 
 func newTransferAction(num uint32) *eos.Action {
-	from,to := eos.AN(config.Config.TransferUser1), eos.AN(config.Config.TransferUser2)
-	if num % uint32(2) > 0 {
+	from, to := eos.AN(config.Config.TransferUser1), eos.AN(config.Config.TransferUser2)
+	if num%uint32(2) > 0 {
 		to, from = from, to
 	}
 
-	asset, err:= eos.NewAsset(config.Config.TransferCoin)
+	asset, err := eos.NewAsset(config.Config.TransferCoin)
 	if nil != err {
 		panic("config.Config.TransferCoin err")
 	}
 
 	return &eos.Action{
-		Account:eos.AN(config.Config.TransferContractAccount),
-		Name:eos.ActN("transfer"),
-		Authorization:[]eos.PermissionLevel{
-			{Actor:from, Permission:eos.PN("active")},
+		Account: eos.AN(config.Config.TransferContractAccount),
+		Name:    eos.ActN("transfer"),
+		Authorization: []eos.PermissionLevel{
+			{Actor: from, Permission: eos.PN("active")},
 		},
-		ActionData:eos.NewActionData(token.Transfer{
-			From:from,
-			To:to,
+		ActionData: eos.NewActionData(token.Transfer{
+			From:     from,
+			To:       to,
 			Quantity: asset,
-			Memo:"",
+			Memo:     "",
 		}),
 	}
 }
 
-func GetRandomApi() (*eos.API) {
+func GetRandomApi() *eos.API {
 	if len(nodeApiList) == 0 {
 		panic("node Api list is nil ")
 	}
@@ -178,13 +178,13 @@ func GetRandomApi() (*eos.API) {
 	return nodeApiList[nodeIdx]
 }
 
-func GetRandomHistoryApi() (*eos.API) {
+func GetRandomHistoryApi() *eos.API {
 	if len(historyNodeApiList) == 0 {
 		panic("history node Api list is nil ")
 	}
 	nodeIdx := uint32(0)
 	if len(historyNodeApiList) > 1 {
-		nodeIdx = rand.Uint32() % uint32(len(historyNodeApiList ))
+		nodeIdx = rand.Uint32() % uint32(len(historyNodeApiList))
 	}
 	return historyNodeApiList[nodeIdx]
 }
@@ -200,7 +200,7 @@ func newSendAction(job2 job) *eos.Action {
 }
 
 func sendTx(ctx context.Context, job2 job) error {
-	nonce, _:=	uuid.NewV4()
+	nonce, _ := uuid.NewV4()
 	rsp, err := GetRandomApi().SignPushActions(newSendAction(job2), system.NewNonce(nonce.String()))
 	if nil != err {
 		return fmt.Errorf("rsp error :%v", err)
@@ -216,15 +216,14 @@ func sendTx(ctx context.Context, job2 job) error {
 	return nil
 }
 
-
-func work(ctx context.Context, list chan job, hook func(context.Context, job)(error))  {
+func work(ctx context.Context, list chan job, hook func(context.Context, job) error) {
 	fmt.Printf("%d \twork run.\n", ctx.Value(ctxKeyWorkID))
 	for {
 		select {
 		case <-ctx.Done():
 			fmt.Printf("%d \twork exit\n", ctx.Value(ctxKeyWorkID))
 			return
-		case e, ok:= <-list:
+		case e, ok := <-list:
 			if !ok {
 				fmt.Println(ctx.Value(ctxKeyWorkID), "<-job chan  fail")
 			}

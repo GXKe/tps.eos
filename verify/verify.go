@@ -4,11 +4,12 @@ import (
 	"bufio"
 	"context"
 	"fmt"
-	"github.com/GXK666/tps.eos/config"
-	"github.com/GXK666/tps.eos/send"
 	"io"
 	"os"
 	"sync"
+
+	"github.com/GXK666/tps.eos/config"
+	"github.com/GXK666/tps.eos/send"
 )
 
 var (
@@ -21,39 +22,39 @@ type job struct {
 }
 
 type result struct {
-	Total	uint64
-	Fail	uint64
+	Total   uint64
+	Fail    uint64
 	Success uint64
 
-	m		*sync.Mutex
-	wg 		*sync.WaitGroup
+	m  *sync.Mutex
+	wg *sync.WaitGroup
 }
 
 func newResult() *result {
-	return &result{m:new(sync.Mutex), wg:new(sync.WaitGroup)}
+	return &result{m: new(sync.Mutex), wg: new(sync.WaitGroup)}
 }
 
-func (r *result)addTotal()  {
+func (r *result) addTotal() {
 	//r.m.Lock()
 	//defer r.m.Unlock()
-	r.Total = r.Total +1
+	r.Total = r.Total + 1
 }
 
-func (r *result)addFail()  {
+func (r *result) addFail() {
 	r.m.Lock()
 	defer r.m.Unlock()
-	r.Fail = r.Fail +1
+	r.Fail = r.Fail + 1
 }
 
-func (r *result)addSuccess()  {
+func (r *result) addSuccess() {
 	r.m.Lock()
 	defer r.m.Unlock()
-	r.Success = r.Success +1
+	r.Success = r.Success + 1
 }
 
-func (r *result) Print()  {
+func (r *result) Print() {
 	fmt.Printf("Total %d, Success %d, Fail %d, Wait %d,  success %f% \n",
-		r.Total, r.Success, r.Fail, r.Total - r.Success - r.Fail, float32(100* r.Success)/ float32(r.Total) )
+		r.Total, r.Success, r.Fail, r.Total-r.Success-r.Fail, float32(100*r.Success)/float32(r.Total))
 }
 
 func check(e error) {
@@ -62,9 +63,7 @@ func check(e error) {
 	}
 }
 
-
-
-func VerifyTxid(ctx context.Context, file string) error{
+func VerifyTxid(ctx context.Context, file string) error {
 	r := newResult()
 	ctxR := context.WithValue(ctx, ctxKeyResult, r)
 	r.wg.Add(int(config.Config.Routine))
@@ -76,11 +75,11 @@ func VerifyTxid(ctx context.Context, file string) error{
 	}
 
 	err := readLine(ctx, file, func(bytes []byte) {
-		if len(bytes) == 0{
+		if len(bytes) == 0 {
 			return
 		}
 		r.addTotal()
-		jobList<-job{txid:string(bytes)[:64]}
+		jobList <- job{txid: string(bytes)[:64]}
 	})
 
 	if err != nil {
@@ -88,7 +87,7 @@ func VerifyTxid(ctx context.Context, file string) error{
 	}
 
 	for i := uint32(0); i < config.Config.Routine; i++ {
-		jobList<-job{txid: "exit"}
+		jobList <- job{txid: "exit"}
 	}
 
 	r.Print()
@@ -126,7 +125,7 @@ func readLine(ctx context.Context, filePth string, hookfn func([]byte)) error {
 	return nil
 }
 
-func work(ctx context.Context, list chan job, hook func(context.Context, job)(error)) {
+func work(ctx context.Context, list chan job, hook func(context.Context, job) error) {
 	fmt.Printf("%d \twork run.\n", ctx.Value(ctxKeyWorkID))
 	r, ok := ctx.Value(ctxKeyResult).(*result)
 	if !ok {
@@ -139,7 +138,7 @@ func work(ctx context.Context, list chan job, hook func(context.Context, job)(er
 		case <-ctx.Done():
 			fmt.Printf("%d \twork exit\n", ctx.Value(ctxKeyWorkID))
 			return
-		case e, ok:= <-list:
+		case e, ok := <-list:
 			if !ok {
 				fmt.Println(ctx.Value(ctxKeyWorkID), "<-job chan  fail")
 			}
