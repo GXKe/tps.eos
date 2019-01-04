@@ -63,6 +63,7 @@ func init() {
 				return []ecc.PublicKey{pubKey}, nil
 			})
 			api.HttpClient.Timeout = time.Duration(config.Config.Timeout) * time.Second
+			//api.Debug = true
 			nodeApiList = append(nodeApiList, api)
 		}
 	}
@@ -78,6 +79,7 @@ func init() {
 				return []ecc.PublicKey{pubKey}, nil
 			})
 			api.HttpClient.Timeout = time.Duration(config.Config.Timeout) * time.Second
+			//api.Debug = true
 			nodeApiList = append(nodeApiList, api)
 			historyNodeApiList = append(historyNodeApiList, api)
 		}
@@ -204,7 +206,9 @@ func signPushActions(actions []*eos.Action) (out *eos.PushTransactionFullResp, e
 
 	api := GetRandomApi()
 	opts := &eos.TxOptions{}
-	opts.FillFromChain(api)
+	if err := opts.FillFromChain(api); err != nil {
+		return nil, err
+	}
 
 	tx := eos.NewTransaction(actions, opts)
 	tx.SetExpiration(time.Duration(config.Config.TxExpiration) * time.Second)

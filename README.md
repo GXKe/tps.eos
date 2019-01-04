@@ -11,3 +11,6 @@ Need to deploy hello contract, and have enough cpu, net resources
 ./tps.eos -s transfer 输出transfer交易
 
 ./top.eos -f txids.file  校验txid是否存在于区块链上，依赖HistoryNode配置
+
+
+ ./tps.eos -cs 10101 -ce  10401  统计区块内交易数量

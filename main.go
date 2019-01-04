@@ -17,6 +17,8 @@ func main() {
 	sendType := ""
 	flag.StringVar(&file, "f", "", "txid file name")
 	flag.StringVar(&sendType, "s", "hi", "send transfer type: hi,transfer")
+	blockStart := flag.Uint("cs", 0, "start block num for calc tx")
+	blockEnd := flag.Uint("ce", 0, "end block num for calc tx")
 	flag.Parse()
 
 	ctx, cancel := context.WithCancel(context.Background())
@@ -24,7 +26,9 @@ func main() {
 		verify.VerifyTxid(ctx, file)
 		return
 	} else {
-		if err := send.Run(ctx, sendType); nil != err {
+		if blockEnd != nil && blockStart != nil && *blockStart > 0 && *blockEnd > *blockStart {
+			verify.Calc(ctx, *blockStart, *blockEnd)
+		} else if err := send.Run(ctx, sendType); nil != err {
 			panic(err)
 		}
 
